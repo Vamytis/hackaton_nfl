@@ -1,0 +1,172 @@
+<script defer src="js/data.js"></script>
+<script defer src="js/dashboard.js"></script>
+<script defer src="js/replay.js"></script>
+
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pass Pro Lab</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Pass Pro Lab</b><span>Bilan de protection de passe</span></div>
+  <nav>
+    <a href="#s1">1 Sélection</a><a href="#s2">2 Bilan</a><a href="#s3">3 Comparer</a>
+    <a href="#s4">4 Actions</a><a href="#s5">5 Rejeu</a><a href="#s6">6 Coach</a>
+  </nav>
+  <label class="btn" for="files">Charger les CSV</label>
+</header>
+<div id="prog"><i></i></div>
+
+<main id="app">
+<section class="card" id="s0">
+  <h2>Données</h2>
+  <div class="drop" id="drop">
+    <b>Les données du dossier <code>data/</code> sont chargées automatiquement. Vous pouvez aussi glisser ici vos CSV ou
+    <label class="btn sec" for="files">Choisir les fichiers</label>
+    <input id="files" type="file" accept=".csv,text/csv" multiple hidden>
+    <div class="hint">Les fichiers sont lus localement dans votre navigateur : rien n'est envoyé nulle part. Les fichiers de tracking de <code>data/tracking/</code> ne sont lus qu'à la demande, pour le match rejoué. Pour le chargement automatique, lancez l’application via un serveur local.</div>
+  </div>
+  <div id="loadStatus"></div>
+</section>
+
+<section class="card needs-data" id="s1">
+  <h2><span class="step">1</span>Choisir une équipe et un match</h2>
+  <div class="row">
+    <label class="f">Équipe (en attaque)<select id="selTeam"></select></label>
+    <label class="f">Match<select id="selGame"></select></label>
+    <div class="hint" id="scopeInfo"></div>
+  </div>
+</section>
+
+<section class="card needs-data" id="s2">
+  <h2><span class="step">2</span>Bilan de protection</h2>
+  <div class="kpis" id="kpis"></div>
+  <ul class="attn" id="attn"></ul>
+  <div class="hint">Taux = événements concédés ÷ actions de blocage (un joueur sur un jeu de passe = 1 action). « Pression » = sack, hit ou hurry concédé (compté une seule fois par action). Comparaison à la moyenne de tous les matchs chargés.</div>
+</section>
+
+<section class="card needs-data" id="s3">
+  <h2><span class="step">3</span>Comparer joueurs et formations</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="players">Joueurs</button>
+    <button class="tab" data-tab="groups">Formations / contextes</button>
+    <button class="tab" data-tab="pos">Postes</button>
+    <label class="f" id="grpWrap" style="display:none">Regrouper par
+      <select id="selGroup">
+        <option value="offenseFormation">Formation offensive</option>
+        <option value="personnelO">Personnel offensif</option>
+        <option value="dropBackType">Type de dropback</option>
+        <option value="pff_playAction">Play-action</option>
+        <option value="defendersInBox">Défenseurs dans la box</option>
+        <option value="pff_passCoverage">Couverture adverse</option>
+        <option value="pff_passCoverageType">Type de couverture</option>
+        <option value="personnelD">Personnel défensif</option>
+      </select></label>
+    <label class="f">Effectif min. joueurs/postes (actions)<input type="number" id="minSnaps" value="15" min="0" style="width:90px"></label>
+    <label class="f">Effectif min. formations (jeux)<input type="number" id="minPlays" value="5" min="0" style="width:90px"></label>
+  </div>
+  <div class="hint" id="tabHint"></div>
+  <div class="scroll"><div id="cmpTable"></div></div>
+  <div id="cmpPanel" class="cmp"></div>
+</section>
+
+<section class="card needs-data" id="s4">
+  <h2><span class="step">4</span>Sélectionner une action problématique <span class="n" id="probCount"></span></h2>
+  <div class="row" style="margin-bottom:10px">
+    <label class="f">Type<select id="probType">
+      <option value="all">Toutes (sack, hit, hurry)</option><option value="sack">Sacks</option>
+      <option value="hit">Hits</option><option value="hurry">Hurries</option></select></label>
+    <div class="hint">Cliquez une ligne pour la rejouer à l'étape 5.</div>
+  </div>
+  <div class="scroll"><div id="probTable"></div></div>
+</section>
+
+<section class="card needs-data" id="s5">
+  <h2><span class="step">5</span>Rejouer l'action</h2>
+  <div id="replayEmpty" class="hint">Sélectionnez une action à l'étape 4.</div>
+  <div id="replayBody" hidden>
+    <div class="meta" id="playMeta"></div>
+    <div class="desc" id="playDesc"></div>
+    <div id="replayMsg" class="hint" hidden></div>
+    <div class="replay-grid" id="stageWrap">
+      <div>
+        <div class="cwrap"><canvas id="cv"></canvas><div class="tip" id="tip" hidden></div></div>
+        <div class="ctrls">
+          <button class="btn sec" id="btnSnap" title="Retour au snap">⏮</button>
+          <button class="btn sec" id="btnPrev" title="Image précédente (←)">◀</button>
+          <button class="btn" id="btnPlay" style="min-width:90px">▶ Lecture</button>
+          <button class="btn sec" id="btnNext" title="Image suivante (→)">▶</button>
+          <button class="btn sec" id="btnEnd" title="Fin de l'action">⏭</button>
+          <input type="range" id="slider" min="0" max="1" value="0">
+          <select id="selSpeed"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+        </div>
+        <div id="evStrip"></div>
+        <div id="readout"></div>
+      </div>
+      <aside class="side">
+        <div><h3>Affichage</h3>
+          <div class="opts">
+            <label>Vue <select id="selView"><option value="pocket">Poche (zoom protection)</option><option value="action">Zone d'action</option><option value="full">Terrain complet</option></select></label>
+            <label><input type="checkbox" id="chkTrails" checked> Trajectoires jusqu'à l'image</label>
+            <label><input type="checkbox" id="chkFull"> Trajectoires complètes (aperçu)</label>
+            <label><input type="checkbox" id="chkAssign" checked> Duels de blocage</label>
+            <label><input type="checkbox" id="chkDist" checked> Distance QB–rusher</label>
+            <label><input type="checkbox" id="chkVec"> Vitesse / direction</label>
+            <label>Étiquettes <select id="selLabels"><option value="num">Numéro</option><option value="pos">Poste</option><option value="name">Numéro + nom</option></select></label>
+          </div></div>
+        <div><h3>Rôles</h3><div class="legend" id="roleLegend"></div>
+          <div class="legend" style="margin-top:8px">
+            <span><span class="tag t-sack">SACK</span><span class="tag t-hit">HIT</span><span class="tag t-hurry">HURRY</span> concédé par le bloqueur (anneau)</span>
+            <span>Trait rouge = bloqueur battu / pression · vert = duel tenu</span>
+          </div></div>
+        <div><h3>Joueurs clés</h3><div id="roster"></div></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="card needs-data" id="s6">
+  <h2><span class="step">6</span>Observation du coach et priorité d'entraînement</h2>
+  <div class="coach">
+    <div>
+      <div id="noteTarget" class="hint">Sélectionnez une action pour saisir une observation.</div>
+      <ul class="facts" id="facts"></ul>
+      <div id="noteForm" hidden style="margin-top:10px;display:grid;gap:10px">
+        <label class="f">Observation<textarea id="noteObs" placeholder="Ce que vous voyez sur l'action : placement, timing, communication…"></textarea></label>
+        <div class="grid2">
+          <label class="f">Priorité d'entraînement<select id="notePrio"><option value="">Aucune</option><option value="1">1 · Haute</option><option value="2">2 · Moyenne</option><option value="3">3 · Basse</option></select></label>
+          <label class="f">Thème à travailler<select id="noteFocus">
+            <option value="">—</option><option>Placement des mains</option><option>Jeu de pieds / base</option>
+            <option>Transmission des stunts et twists</option><option>Aide en double-team</option>
+            <option>Reconnaissance des blitz</option><option>Communication à la ligne</option>
+            <option>Timing du QB / libération du ballon</option><option>Protection RB / chip</option><option>Autre</option></select></label>
+        </div>
+        <div class="grid2">
+          <label class="f">Joueur concerné<select id="notePlayer"></select></label>
+          <label class="f">Exercice proposé<input type="text" id="noteDrill" placeholder="ex. : 1-contre-1 sur stunts"></label>
+        </div>
+        <div class="row"><button class="btn" id="btnSaveNote">Enregistrer</button><button class="btn danger" id="btnDelNote">Supprimer</button><span class="n" id="noteState"></span></div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin:0 0 6px;font-size:13px;color:var(--mut);text-transform:uppercase">Plan d'entraînement (synthèse)</h3>
+      <div id="trainSummary"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sec" id="btnExportCsv">Exporter CSV</button>
+        <button class="btn sec" id="btnExportJson">Exporter JSON</button>
+        <label class="btn sec" for="importJson">Importer JSON</label><input type="file" id="importJson" accept=".json" hidden>
+      </div>
+    </div>
+  </div>
+  <div class="scroll" style="margin-top:14px"><div id="notesList"></div></div>
+  <div class="hint">Les notes sont enregistrées dans ce navigateur (stockage local) ; exportez-les pour les partager ou les sauvegarder.</div>
+</section>
+</main>
+
+<script src="js/app.js" defer></script>
+</body>
+</html>
