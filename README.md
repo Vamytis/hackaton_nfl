@@ -20,7 +20,7 @@ Pass Pro Lab est une application web d'analyse de la protection de passe au foot
 ### 1. Se placer dans le répertoire du projet
 
 ```bash
-cd proj_nfl
+cd hackaton_nfl
 ```
 
 ### 2. Lancer un serveur HTTP local
